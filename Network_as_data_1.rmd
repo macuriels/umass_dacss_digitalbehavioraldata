@@ -1,0 +1,219 @@
+---
+title: 'DACSS697DB/COMM497DB: Network as data (1)'
+author: |
+  | [curiositybits.cc](curiositybits.cc)
+date: "Updated on `r Sys.Date()`"
+output:
+  rmdformats::readthedown:
+    highlight: kate
+---
+In this tutorial, we will work with a pre-generated network from [OSOME Network Tool](https://osome.iu.edu/tools/networks).
+
+#What can a network tell us?
+
+Have you wondered how information spreads on Twitter, how Instagram *influencers* are identified, and how different actors in an online community collaborate or confront one and another? There are the sorts of questions that can be best answered using **network analysis** and **network visualization**. In network analysis of internet communities, we visualize and quantify the structure of social relationships and information flows. 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = FALSE,
+	message = FALSE,
+	warning = FALSE
+)
+library(igraph)
+library(visNetwork)
+library(scales)
+library(DT)
+library(readr)
+load(file = "Retweet_network_example.rda")
+```
+
+Here, you can see a retweet network based on #Ukraine from July 9, 2022 to August 8, 2022. In this network, a pair of users represents a retweeting relationship. That is, two users are connected to one and another if one retweets or is retweeted by the other. For simplicity, the graph below only shows users who at least twice retweeted or were retweeted by others. 
+
+Guess how the size and color of a node is determined.
+
+```{r r1, echo=FALSE, message=FALSE, warning=FALSE}
+visIgraph(twocore,idToLabel = TRUE,layout = "layout_nicely") %>%
+  visOptions(highlightNearest = TRUE, nodesIdSelection = TRUE) 
+```
+
+#Edgelist
+
+Where do we begin to visualize a network? It all starts with an edgelist. The table below shows a portion of the edgelist.
+
+An edgelist shows all edges in a network along with attributes of the edges. An edge is a pair of relationship between two nodes (in this case, users). An edge can be *directed*: for example, A retweets B will be expressed as **User A → User B**, whereas B retweets A is expressed as **User B → User A**. But, in some cases, an edge is undirected. Think about your Facebook relationships. If user A is a friend of user B. By default, user B is also connected to user A. 
+
+In the edgelist below. The column _from_label_ lists the Twitter users who retweeted. The column _to_label_ shows those users who were on the receiving end of the retweets (i.e., users who were retweeted by others). The _weight_ column is edge weight, referring to the number of retweeting that occurred between the same pair of users. 
+
+```{r r2, echo=FALSE, message=FALSE, warning=FALSE}
+datatable(edgelist, options = list(pageLength = 10)) 
+```
+
+#Nodelist 
+
+In our example, a node is a Twitter user. Below is a list of nodes, with their id, labels, and attributes (e.g., size, color). 
+
+```{r r3, echo=FALSE, message=FALSE, warning=FALSE}
+datatable(nodelist, options = list(pageLength = 2))  
+```
+
+#R Libraries 
+we will try some of the basics using two libraries [_igraph_](https://igraph.org/) and [_VisNetwork_](http://datastorm-open.github.io/visNetwork/). _igraph_ comes with some in-built functions for visualization. _VisNetwork_ takes a step further by making it prettier and interactive.
+
+#Import an existing network file
+
+There are several common file types that contain network information. The file types include *graphml*, *gml* or just a regular dataframe. Below, we import an external .gml file into R.
+
+```{r r4, message=FALSE, warning=FALSE}
+library(igraph)
+nx <- read_graph("RTNetwork_#ukraine.gml",format = c("gml"))
+nx
+```
+
+Let's just take a look at some network-level indicators. 
+
+#Size matters!
+Run the code below to get a count of edges and nodes in _rtnet_ and _mtnet_. 
+
+```{r r5, message=FALSE, warning=FALSE}
+vcount(nx) #this shows the number of nodes/vertices
+ecount(nx) #this shows the number of edges 
+```
+
+#Dense or sparse?
+
+A densely connected network (high density score) is a type of network in which many users are interconnected, whereas a sparse network (low density) is a network in which only a few are interconnected. Two contrasting examples of dense and sparse networks are a network of people in a family gathering in which almost everyone knows everyone else, and a network of people sitting on a public bus.
+
+**Is it a dense network?**
+
+```{r r6, message=FALSE, warning=FALSE}
+edge_density(nx, loops = FALSE) 
+```
+
+#Centralized or decentralized?
+
+Think of centralization as a question of inequality and who is in control. In a centralized network, a small number of nodes (users) control the information flow. In a retweet network specifically, it means that only a handful of users retweet or are retweeted by others. Centralized and decentralized networks have different ramification for the diffusion of ideas, norms, and effective mobilization. 
+
+by setting **mode = c("in")**, we calculate the centralization score based on the extent to which users are retweeted by others (as opposed to retweeting others).
+
+**So, is it centralized?**
+
+```{r r7,message=FALSE, warning=FALSE}
+#Calculate centralization
+centr_degree(nx, mode = c("in"), loops = TRUE,normalized = TRUE)$centralization
+```
+
+#Birds of a feathre flock together?
+
+Have you heard of the saying *birds of a feather flock together*? In a network, nodes tend to cluster together based on some shared attributes. For instance, Twitter users may retweet mostly content they agree with. Hence, this tendency will result in a cluster of nodes based on similar mindsets or opinions. To what extent is a network reflecting this pattern of clustering can be quantified by using *Modularity score.* A higher number means a more divided network. 
+
+```{r r8, message=FALSE, warning=FALSE}
+wtc <- cluster_walktrap(nx)
+modularity(wtc)
+```
+
+#Is it reciprocal?
+
+Reciprocity is calculated as the proportion of reciprocated ties. In the retweet network, for example, reciprocity shows the extent to which a pair of users have mutually retweeted one and another. 
+
+*Which form of Twitter interactions (retweet vs. mention) is more reciprocal?*
+
+```{r r9, message=FALSE, warning=FALSE}
+reciprocity(nx)
+```
+
+#Look for influencers
+
+I have introduced previously a range of indicators to quantify a network. Such indicators are only useful when it involves a comparison of different networks. When analyzing one single network, we are more interested in node-level indicators. 
+
+A common task in network analysis is identifying *influencers*? An influencer could mean different things to different people. Here we try a couple of dfferent metrics. 
+
+**indegree centrality** measures the number of incoming connections a user has received. A high indegree in the retweet network means that the user is frequently retweeted by others. Do you agree that the most retweeted users are influencers? And why?
+
+**outdegree centrality** measures the number of outgoing connections a user has. A high outdegree in the retweet network means that the user frequently retweets other users. What would you call such users, *mobilizers*?
+
+**Betweenness centrality** measures the number of times a node lies on the shortest path between other nodes. We use this metric to find users who act as ‘bridges’ between nodes in a network and who influence the information flow around a network. 
+
+Ever wonder how Google ranks search results? It uses the **PageRank algorithm** developed by Google's founders Sergey Brin and Larry Page. We can use PageRank to locate influencers as well.
+
+```{r r10, message=FALSE, warning=FALSE}
+indegree_rt <- sort(degree(nx,mode = "in"),decreasing = TRUE)
+
+V(nx)$indegree <- degree(nx,mode = "in")
+V(nx)$outdegree <- degree(nx,mode = "out")
+V(nx)$bt <- betweenness(nx,directed=T, weights=NA)
+V(nx)$pagerank <- page_rank(nx, algo = c("prpack"))
+```
+
+In the code below, we calculate the aforementioned centrality measures and then add the the centrality measures as node attributes, which will be included as columns in the nodelist. Below is a preview of the nodelist with centrality scores added.
+
+```{r r11, message=FALSE, warning=FALSE}
+#nodelist1 <- vertex_attr(nx)
+#nodelist1 <- as.data.frame(nodelist1)
+#datatable(nodelist1, options = list(pageLength = 10)) 
+```
+
+#Look for clusters/cliques
+
+We use *community detection algorithm* to cluster users into different groups (we call such groups _clusters_ or _cliques_). Users in the same cluster are more connected with one and another than with users outside of the cluster. By using the community detection method, we can reveal important divisions and fragmentation that exist due to different opinions, values, and user characteristics. 
+
+Some community detection algorithms require intensive computating. It may take a long time to produce an output. 
+
+**k-core**
+
+Creating k-core is fast and easy. We can use k-core to identify a small subset of users who are the most interconnected. In a k-core, each node has at least _k_ connections with everyone else. Below we extract a 2-core (named _twocore_) in which each user has at least 2 edges with any other users in the core. 
+
+```{r r12, message=FALSE, warning=FALSE}
+kcore <- coreness(nx, mode="all") 
+twocore <- induced_subgraph(nx, kcore>=2)
+```
+
+**cluster_walktrap** 
+
+This is one of the community detection algorithm that is computationally intensive. Be patient when it is crunching numbers for you.
+
+The code above creates an object call _ceb_. It contains the information about which cluster each node belongs to. We can run the code below to see the cluster ID of the first 10 nodes.
+
+```{r r13, message=FALSE, warning=FALSE}
+ceb <- cluster_walktrap(nx) 
+```
+
+#Visualize a network  and make it pretty!
+
+Before you visualize a network, here are the decisions you need to make:
+
+- do you want to assign colors to nodes based on some node attributes?
+- do you want to set the node size based on some attributes?
+- do you want to show all nodes?
+
+In our example below, we color nodes based on the clusters they belong to. We set the node size based on PageRank score (the famous scoring technique used by Google), with central nodes represented by bigger nodes. And we don't want to show all nodes as that will create a messy network; Instead, we would show only the most interconnected subset (using k-core). 
+
+In the previous steps, we know the codes for calculating node and network-level metrics (e.g., centrality). Here, we will pass the metrics to nodes and store them as node attributes. This will allows the visualization code to pick up the attributes and use them for sizing and coloring. 
+
+In the code below, we add PageRank score (used for node size) and the cluster id (used for assigning color). We use _V(rt)_ to access node attributes and _E(rt)_ to access edge attributes. Since we visualize only the 3-core. We then create a subset of the network.
+
+```{r r14, message=FALSE, warning=FALSE}
+library(igraph)
+library(visNetwork)
+library(scales)
+
+pr <-page_rank(nx, algo = c("prpack"))
+V(nx)$size <- pr$vector*100  #set node size by PageRank scores.
+
+wc <- cluster_walktrap(nx)
+V(nx)$color <- membership(wc) # set color by subgroup id
+
+kcore <- coreness(nx, mode="all") 
+threecore <- induced_subgraph(nx, kcore>=3)
+```
+
+**Find a visualization algorithm that fits**
+
+And we visualize it. Notice that we set **layout = "layout_nicely"**? This is how we specify which visualization algorithm to use. There is a whole bunch of them: see [the listing](https://igraph.org/r/doc/layout_.html). If you are curious about visual effects from different algorithms, try layout ="layout_in_circle" or layout ="layout_with_kk" or layout ="layout_with_sugiyama"
+
+```{r r15, message=FALSE, warning=FALSE}
+
+visIgraph(threecore,idToLabel = TRUE,layout = "layout_nicely") %>%
+  visOptions(highlightNearest = TRUE, nodesIdSelection = TRUE) 
+```
+
+

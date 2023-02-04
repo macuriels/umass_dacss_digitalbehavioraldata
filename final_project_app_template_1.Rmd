@@ -1,0 +1,81 @@
+---
+title: "My Final Project"
+author: "ENTER YOUR NAME"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    vertical_layout: fill
+    social: menu
+    theme: united
+#runtime: shiny
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(rtweet)
+library(leaflet)
+library(quanteda)
+library(quanteda.textstats)
+library(quanteda.textplots)
+library(igraph)
+library(visNetwork)
+library(scales)
+
+load(file="#WorldCup2022_tweets.rda")
+nx <- read_graph("RTNetwork_#ukraine.gml",format = c("gml"))
+```
+
+Column {data-width=650}
+-----------------------------------------------------------------------
+
+### Tweet map
+
+In this section, I will introduce xxxxx. 
+
+```{r}
+geocodes <- lat_lng(tweets)
+geocodes <- geocodes[!is.na(geocodes$lat),]
+
+map <- leaflet(data = geocodes) %>% 
+  addTiles() %>%
+  setView(lng = 39, lat = 34, zoom = 2) %>% 
+  addMarkers(lng = ~lng, lat = ~lat,popup = ~ as.character(text)) %>% 
+  addProviderTiles(providers$Esri.NatGeoWorldMap) %>% #select basemap template
+  addCircleMarkers(stroke = FALSE, fillOpacity = 0.2) 
+
+map
+```
+
+Column {data-width=350}
+-----------------------------------------------------------------------
+
+### Hashtag network
+
+```{r}
+corpus1 <- corpus(tweets,docid_field = "id_str",text_field = "text") 
+
+tweets_dfm <- tokens(corpus1, remove_punct = TRUE, remove_numbers = TRUE, remove_url=TRUE) %>%  
+  tokens_remove(stopwords("en")) %>%
+  dfm()
+
+tag_dfm <- dfm_select(tweets_dfm, pattern = "#*")
+toptag <- names(topfeatures(tag_dfm, 100))
+tag_fcm <- fcm(tag_dfm)
+
+topgat_fcm <- fcm_select(tag_fcm, pattern = toptag)
+textplot_network(topgat_fcm, min_freq = 0.1, edge_alpha = 0.5, edge_size = 1, edge_color = "orange")
+```
+
+### Wordcloud
+
+```{r}
+corpus1 <- corpus(tweets,docid_field = "id_str",text_field = "text") 
+
+tweets_dfm <- tokens(corpus1, remove_punct = TRUE, remove_numbers = TRUE, remove_url=TRUE) %>%  
+  tokens_remove(stopwords("en")) %>%
+  dfm()
+
+set.seed(132)
+textplot_wordcloud(tweets_dfm, max_words = 100)
+```
+

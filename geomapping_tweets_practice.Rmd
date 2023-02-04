@@ -1,0 +1,120 @@
+---
+title: "Geomapping tweets"
+author: "Miguel Curiel"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Import existing Twitter data
+
+To experiment with the idea of geomapping tweets, we will use an existing tweet dataset collected on Nov. 27, 2022. The dataset contains 9,570 #WorldCup2022 tweets. The source file is **#WorldCup2022_tweets.rda** 
+
+Afer you run the code below, you will see an R object called tweets. Click to see the tweets. 
+```{r r1}
+load(file="#WorldCup2022_tweets.rda")
+```
+
+
+## Extract geographic information from the tweet data
+
+The *lat_lng()* function can parse Twitter data with latitude and longitude. In the code below, it creates a new data frame called *geocodes* which contains only geo-tagged tweets. 
+```{r r2}
+library(rtweet)
+geocodes <- lat_lng(tweets)
+geocodes <- geocodes[!is.na(geocodes$lat),] #remove non-geo-tagged tweets
+```
+
+## Visualize tweets using ggplot2
+
+You can use *ggplot2* to create a static map showing the geo-tagged tweets. See how the two columns *lng* and *lat* are entered into the code below. 
+
+```{r r3}
+library(ggplot2)
+par(mar = c(0, 0, 0, 0))
+maps::map("usa", lwd = .35)
+with(geocodes, points(lng, lat, pch = 20, cex = .75, col = rgb(0, .3, .7, .75)))
+```
+
+## Visualize tweets using leaflet
+
+You can use *leaflet* to create an interactive map showing the geo-tagged tweets. See how the two columns *lng* and *lat* are entered into the code below. 
+
+```{r r4}
+library(leaflet)
+
+map1 <- leaflet(data = geocodes) %>% 
+  addTiles() %>%
+  setView(lng = -98.35, lat = 39.50, zoom = 3) %>% 
+  addCircleMarkers(lng = ~lng, lat = ~lat) %>% 
+  addProviderTiles("OpenStreetMap.Mapnik") %>%
+  addCircleMarkers(
+    stroke = FALSE, fillOpacity = 0.5
+  ) 
+
+map1
+```
+
+## Leaflet with styles 
+
+You can change basemap templates and add features to the map. In the code below we will add text box to each geotag so that the tweet text appears when you click a geotag. See how the *text* column is used in the code.  
+
+```{r r5}
+map2 <- leaflet(data = geocodes) %>% 
+  addTiles() %>%
+  setView(lng = -98.35, lat = 39.50, zoom = 3) %>% 
+  addMarkers(lng = ~lng, lat = ~lat,popup = ~ as.character(text)) %>% 
+  addProviderTiles(providers$Esri.NatGeoWorldMap) %>% #select basemap template
+  addCircleMarkers(
+    stroke = FALSE, fillOpacity = 0.5
+  ) 
+
+map2
+```
+
+
+## Create your own map! 
+
+Learn from the example and revise the code to create your own map. Please collect your own set of tweets and visualize geo-tagged tweets below. 
+
+```{r r6}
+
+##set up Twitter search
+# mytoken <- create_token(
+#   app = "R_Workshop_DB",
+#   consumer_key = "4EL1tCE2DG4OdtLrynOGnWsHi",
+#   consumer_secret = "57Urg78Zkpoqj4M6ZPL8TOXp7X4o0IM4Thh2FzmUGrm0TmgviD",
+#   access_token = "17917334-QzAR7yu42izruhOLsQEzVbHOVwXYHj0BrhMkqhJne",
+#   access_secret = "fvNA7z3Sb1nVfmqCIEJvDxkIWyvGlkbe6xXgscnXFlvzj") 
+
+#download tweets
+hashtag <- search_tweets("#indonesia", n = 10000, include_rts = FALSE)
+
+```
+```{r}
+
+#convert to lat/long data
+geocodes2 <- lat_lng(hashtag)
+geocodes2 <- geocodes2[!is.na(geocodes2$lat),] #remove non-geo-tagged tweets
+
+```
+
+```{r}
+
+#generate map
+
+map3 <- leaflet(data = geocodes2) %>% 
+  addTiles() %>%
+  setView(lng = -98.35, lat = 39.50, zoom = 3) %>% 
+  addCircleMarkers(lng = ~lng, lat = ~lat) %>% 
+  addProviderTiles("OpenStreetMap.Mapnik") %>%
+  addCircleMarkers(
+    stroke = FALSE, fillOpacity = 0.5
+  ) %>% 
+  addLegend(title="#indonesia in Twitter after Mount Semeru's eruption", colors= c("blue"), labels=c("Tweets"))
+
+map3
+```
+

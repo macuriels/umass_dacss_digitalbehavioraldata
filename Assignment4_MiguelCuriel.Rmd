@@ -1,0 +1,90 @@
+---
+title: "Assignment 4"
+author: "Miguel Curiel"
+date: "2022-11-07"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Complete Assignment 4 here.
+
+This is a R Markdown file. Assignment 4 will walk you through some basics about network analysis and visualization. It will also teach you a few things about R Markdown. R Markdown is commonly used for making tutorials and interactive visualization. By knitting a R Markdown file, you will create a HTML file that contains R codes, outputs, and interactive plots. When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. Locate the generated HTML file (by default, it will be saved to your project folder). Submit the HTML file through the link posted on Moodle.
+
+For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+## Generate YouTube Networks
+
+Head to YouTube Data Tools <https://tools.digitalmethods.net/netvizz/youtube/> and click **Video Network**. Type a key term as a *search query*, see *Iterations* to any value between 5 and 10. Set *Crawl depth* to 0 or 1 (the data collection takes longer if you set the value a higher value). Download the .gdf files. There will be two .gdf files. One is a video channel network in which YouTube channels are nodes, and the other is a video network in which individual videos are nodes. Important: for this assignment, please analyze the channel network based on related videos. 
+
+## Load .gdf file
+
+Move the .gdf file to your project folder (the working directory). Use the code below to import the file into R as an igraph object. Remember to replace the file path and filename in the code to match the file on your device.
+
+Before you run the code, you might need to install the readgdf library. To install the library, use the code below.
+
+    library(devtools)
+    devtools::install_github("mikaelpoul/readgdf")
+
+```{r r1}
+library(readgdf)
+
+nx <- read_gdf("videonet_channels_search250_nodes4231_2022_11_17-20_13_11.gdf", as_igraph = TRUE)
+nx
+```
+
+
+## Network size
+
+Noge the name of the igraph object created in the previous step (hint: it is created by the *read_gdf()* function). Edit the code below to get the count of nodes and edges. After you get the numbers, complete the following paragraph. 
+
+This network contains 1598 nodes and 14800 edges, meaning that there are 1598 videos and 14800 relationships based on related videos.
+
+```{r r2}
+library(igraph)
+vcount(nx) #this shows the number of nodes/vertices
+ecount(nx) #this shows the number of edges 
+```
+
+
+## Centrality
+
+Edit the code below to calculate three types of centrality. The code then creates a dataframe containing all node attributes (centrality measures are included as node attributes). Sort the dataframe by in-degree and out-degree respectively. Locate the top 3 nodes by in-degree and out-degree, respectively. Use [SocialBlade](https://socialblade.com/) to do background research on the top nodes. In the text below, describe what the top three nodes by each centrality measure are. Speculate on why they are the top nodes. Also, explain what it means for nodes to have high in-degree and out-degree. 
+
+In my case, my network is based on the search term "love is blind", which is a popular reality show that just finished airing its third season a week ago on Netflix. The top in-degree nodes are US Weekly, Bachelor Fantake, and Entertainment Tonight; while the top out-degree correspond to Grace Report, US Weekly, and Queen E. Having a high in-degree means those channels appear the most recommended by other videos; whereas high out-degree mean they offer the most recommendations. It makes sense that US Weekly and Entertainment Tonight appear with high in-degree as they are popular news outlets, so they are the most recommended by other videos; versus Grace Report and Queen E that have high out-degree and are smaller bloggers, hence they rely on recommending other videos and bloggers.
+
+```{r r3}
+V(nx)$indegree <- degree(nx, mode = "in")
+V(nx)$outdegree <- degree(nx, mode = "out")
+V(nx)$bt <- betweenness(nx, directed=T, weights=NA)
+
+nodelist1 <- vertex_attr(nx)
+nodelist1 <- as.data.frame(nodelist1)
+```
+
+## Clusters & Visualization
+
+Revise the code below to cluster nodes by the cluster_walktrap method. Visualize the entire network by setting node colors by clusters and node size by in-degree. 
+
+Look at the visualization and check if you can discern several clusters there. Look at the nodes with higher in-degree in each cluster. In the paragraph below, explain what the different clusters represent. You do not have to analyze every single cluster. Just focus on the most prominent clusters clearly visible in the visualization.
+
+The top nodes by in-degree in the cluster blue cluster are Entertainment Tonight, Bachelor Fantake and US Weekly. This cluster seems to be about major news sources that talk, post, and review pop culture events such as the airing of the new season of Love is Blind. Other than that, the network seems fragmented and the smaller clusters correspond to smaller bloggers also reviewing the show.
+
+```{r r4}
+library(visNetwork)
+library(scales)
+
+V(nx)$size <- degree(nx, mode = "in")
+
+wc <- cluster_walktrap(nx)
+V(nx)$color <- membership(wc) # set color by subgroup id
+
+visIgraph(nx, idToLabel = TRUE, layout = "layout_nicely") %>%
+  visOptions(highlightNearest = TRUE, nodesIdSelection = TRUE) 
+```
+
+## Ready to knit? 
+
+If you have completed the code and text in the previous steps, you can click the **Knit** function to knit the R Markdown file int a .html file. The HTML file will be saved by default to your project folder (working directory). Submit both this .rmd file and the generated .html file. 

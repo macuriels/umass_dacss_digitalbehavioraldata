@@ -1,0 +1,149 @@
+---
+title: "My Final Project -Dynamic"
+runtime: shiny
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    vertical_layout: fill
+    social: menu
+    theme: united
+# run rsconnect::deployApp()
+---
+
+```{r global, include=FALSE}
+library(flexdashboard)
+library(rtweet)
+library(leaflet)
+library(quanteda)
+library(quanteda.textstats)
+library(quanteda.textplots)
+library(igraph)
+library(visNetwork)
+library(scales)
+library(highcharter)
+library(lubridate)
+library(reshape2)
+library(dplyr)
+library(syuzhet) 
+library(stringr)
+library(tidyr)
+library(DT)
+
+load(file="#WorldCup2022_tweets.rda")
+load(file="sentiments_#WorldCup2022_tweets.rda")
+
+```
+
+Inputs {.sidebar}
+====================================================================
+
+```{r}
+h5("Data updated:", Sys.Date())
+
+checkboxGroupInput("sentiment1", 
+                   label = (helpText(h5("Choose sentiments"))),
+                    choices = list("Anger" = "anger", 
+                    "Anticipation" = "anticipation",
+                    "Disgust" = "disgust",
+                    "Fear" = "fear",
+                    "Joy" = "joy", 
+                    "Sadness" = "sadness", 
+                    "Surprise" = "surprise",
+                    "Trust" = "trust"),
+                   selected = list("surprise","trust","anger"))
+
+selectInput("language", label = (helpText(h5(strong("Choose a language")))),
+            choices = list("English" = "en",
+                           "French" = "fr",
+                           "Spanish" = "es",
+                           "German" = "de",
+                           "Chinese" = "zh",
+                           "Arabic" = "ar",
+                           "Russian" = "ru",
+                           "Turkish" = "tr"),
+            selected = "en"
+)
+
+
+```
+
+Sentiments {data-orientation=scroll data-icon="fa-bar-chart"}
+=======================================================================
+
+### 
+###
+
+### **Introducing Sentiment Analysis**
+
+The sentiment detection algorithm detects *anger*, *sadness*, *joy*, *trust*, *surprise*, *fear*, *anticipation*, and *disgust*. 
+
+### Row 1 {data-height=110}
+-----------------------------------------------------------------------
+
+```{r}
+
+senti_aggregated$date_label <- as.Date(senti_aggregated$date_label)
+
+output$chart <- renderHighchart({
+
+  highchart() %>%
+    hc_add_series(data= senti_aggregated[senti_aggregated$variable %in% input$sentiment1,],"line", hcaes(x = date_label, y = value,                                                                 group=variable)) %>%
+hc_xAxis(type = "datetime")
+
+})
+
+highchartOutput('chart')
+
+```
+
+Hashtags {data-orientation=scroll data-icon="fa-bar-chart"}
+=======================================================================
+
+### **Introducing hashtag networks by language**
+
+Hashtag is defined as xxxxx.
+
+```{r}
+renderPlot({
+  corpus <- corpus(tweets[tweets$lang == input$language,],docid_field = "id_str",text_field = "full_text")
+  
+  tweets_dfm <- tokens(corpus, remove_punct = TRUE, remove_numbers = TRUE, remove_symbols = TRUE, remove_url=TRUE) %>%  
+  dfm()
+  
+  tag_dfm <- dfm_select(tweets_dfm, pattern = "#*")
+  toptag <- names(topfeatures(tag_dfm, 100))
+  tag_fcm <- fcm(tag_dfm)
+  topgat_fcm <- fcm_select(tag_fcm, pattern = toptag)
+  textplot_network(topgat_fcm, min_freq = 0.1, edge_alpha = 0.5, edge_size = 1, edge_color = "orange")
+
+})
+
+```
+
+Map {data-orientation=scroll data-icon="fa-bar-chart"}
+=======================================================================
+
+### **Introducing geomap by language**
+
+This is a map. Explain the map here...
+
+```{r}
+
+renderLeaflet({
+  geocodes <- lat_lng(tweets[tweets$lang == input$language,])
+  geocodes <- geocodes[!is.na(geocodes$lat),]
+
+  map <- leaflet(data = geocodes) %>% 
+  addTiles() %>%
+  setView(lng = 39, lat = 34, zoom = 2) %>% 
+  addMarkers(lng = ~lng, lat = ~lat,popup = ~ as.character(text)) %>% 
+  addProviderTiles(providers$Esri.NatGeoWorldMap) %>% #select basemap template
+  addCircleMarkers(stroke = FALSE, fillOpacity = 0.2) 
+  
+  map
+
+})
+
+
+```
+

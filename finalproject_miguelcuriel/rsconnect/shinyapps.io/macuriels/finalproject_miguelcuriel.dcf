@@ -1,0 +1,14 @@
+name: finalproject_miguelcuriel
+title: finalproject_miguelcuriel
+username:
+account: macuriels
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 7879464
+bundleId: 6638182
+url: https://macuriels.shinyapps.io/finalproject_miguelcuriel/
+when: 1671062901.59451
+lastSyncTime: 1671062901.59452
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: url.docx|workflow.R
